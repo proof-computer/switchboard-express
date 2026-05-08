@@ -5,19 +5,33 @@ on:
     branches:
       - main
   pull_request:
-  workflow_dispatch:
+    branches:
+      - main
 
 permissions:
   contents: read
 
 jobs:
-  build:
+  package:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-      - run: npm install
+          node-version: 22.21.1
+          cache: npm
+      - run: npm ci
       - run: npm run build
+      - name: Test
+        run: |
+          if node -e "process.exit(require('./package.json').scripts?.test ? 0 : 1)"; then
+            npm test
+          else
+            echo "No test script"
+          fi
+      - name: Verify package artifacts
+        run: |
+          if [ -f scripts/verify-package-artifacts.mjs ]; then
+            node scripts/verify-package-artifacts.mjs
+          fi
       - run: npm pack --dry-run --json

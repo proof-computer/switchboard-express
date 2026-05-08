@@ -8,9 +8,12 @@ published on npmjs.com yet.
 ## Install
 
 ```sh
-npm install github:proof-computer/switchboard-express#main express
+npm install github:proof-computer/switchboard-express#v0.1.0 express
 npm install -D typescript tsx @types/node @types/express
 ```
+
+Use `#main` only when intentionally testing unreleased changes. npmjs.com
+publishing is prepared but not active yet.
 
 ## App
 

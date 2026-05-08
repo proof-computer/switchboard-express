@@ -1,0 +1,57 @@
+name: npm Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to npmjs.com. Leave false for a dry run."
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.21.1
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npm run build
+      - name: Test
+        run: |
+          if node -e "process.exit(require('./package.json').scripts?.test ? 0 : 1)"; then
+            npm test
+          else
+            echo "No test script"
+          fi
+      - name: Verify package artifacts
+        run: |
+          if [ -f scripts/verify-package-artifacts.mjs ]; then
+            node scripts/verify-package-artifacts.mjs
+          fi
+      - name: Publish dry run
+        if: ${{ !inputs.publish }}
+        run: |
+          access_args=()
+          if node -e "process.exit(require('./package.json').name.startsWith('@') ? 0 : 1)"; then
+            access_args=(--access public)
+          fi
+          npm publish --dry-run "${access_args[@]}"
+      - name: Publish
+        if: ${{ inputs.publish }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          access_args=()
+          if node -e "process.exit(require('./package.json').name.startsWith('@') ? 0 : 1)"; then
+            access_args=(--access public)
+          fi
+          npm publish --provenance "${access_args[@]}"
