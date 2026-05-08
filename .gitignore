@@ -1,0 +1,13 @@
+node_modules/
+package-lock.json
+dist/
+coverage/
+tmp/
+
+.env
+.env.*
+!.env.example
+
+.acurast/
+.switchboard/
+*.log
