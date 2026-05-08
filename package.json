@@ -32,6 +32,11 @@
     "express": "^5.2.1",
     "typescript": "^5.9.3"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@proofcomputer/switchboard-sdk"
+    ]
+  },
   "engines": {
     "node": ">=20"
   },
