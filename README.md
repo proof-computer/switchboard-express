@@ -8,7 +8,7 @@ published on npmjs.com yet.
 ## Install
 
 ```sh
-npm install github:proof-computer/switchboard-express#v0.1.0 express
+npm install github:proof-computer/switchboard-express#v0.1.1 express
 npm install -D typescript tsx @types/node @types/express
 ```
 
