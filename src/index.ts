@@ -88,7 +88,7 @@ export async function serveSwitchboardExpress(
     port: actualPort,
     certificateHostnames: prepared.certificates.map((certificate) => certificate.hostname)
   });
-  await runtime.reportReady({ protocol, host, port: actualPort });
+  await reportReadyAfterListen(runtime, server, { protocol, host, port: actualPort });
   return { runtime, server, url };
 }
 
@@ -133,6 +133,72 @@ function listen(server: HttpServer, host: string, port: number): Promise<void> {
       resolve();
     });
   });
+}
+
+async function reportReadyAfterListen(
+  runtime: SwitchboardRuntime,
+  server: HttpServer,
+  details: { protocol: "http" | "https"; host: string; port: number }
+): Promise<void> {
+  try {
+    await runtime.reportReady(details);
+  } catch (error) {
+    await runtime.log("ready-report-failed", {
+      retrying: runtime.configValue("SWITCHBOARD_READY_REPORT_RETRY") !== "false",
+      error: safeError(error)
+    }).catch(() => undefined);
+    startReadyReportRetry(runtime, server, details);
+  }
+}
+
+function startReadyReportRetry(
+  runtime: SwitchboardRuntime,
+  server: HttpServer,
+  details: { protocol: "http" | "https"; host: string; port: number }
+): void {
+  if (runtime.configValue("SWITCHBOARD_READY_REPORT_RETRY") === "false") {
+    return;
+  }
+  const intervalMs = Math.max(1_000, numberConfig(runtime, "SWITCHBOARD_READY_REPORT_RETRY_MS", 10_000));
+  const maxAttempts = numberConfig(runtime, "SWITCHBOARD_READY_REPORT_MAX_ATTEMPTS", 60);
+  let attempts = 0;
+  const timer = setInterval(() => {
+    if (attempts >= maxAttempts) {
+      clearInterval(timer);
+      return;
+    }
+    attempts += 1;
+    void runtime.reportReady(details)
+      .then(() => {
+        clearInterval(timer);
+        void runtime.log("ready-report-succeeded", { attempt: attempts }).catch(() => undefined);
+      })
+      .catch((error) => {
+        void runtime.log("ready-report-failed", {
+          attempt: attempts,
+          retrying: attempts < maxAttempts,
+          error: safeError(error)
+        }).catch(() => undefined);
+      });
+  }, intervalMs);
+  timer.unref();
+  server.once("close", () => clearInterval(timer));
+}
+
+function numberConfig(runtime: SwitchboardRuntime, name: string, fallback: number): number {
+  const value = runtime.configValue(name);
+  if (value === undefined || value === "") {
+    return fallback;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function safeError(error: unknown): Record<string, unknown> {
+  if (error instanceof Error) {
+    return { name: error.name, message: error.message, stack: error.stack };
+  }
+  return { message: String(error) };
 }
 
 function isRuntime(value: ServeSwitchboardExpressOptions["runtime"]): value is SwitchboardRuntime {
