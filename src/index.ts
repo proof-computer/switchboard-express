@@ -6,6 +6,7 @@ import {
   createSwitchboardRuntime,
   SWITCHBOARD_CHALLENGE_PATH,
   SWITCHBOARD_STATUS_PATH,
+  SWITCHBOARD_UPSTREAM_ADMISSION_PATH,
   type SwitchboardChallengeConfig,
   type SwitchboardRuntime,
   type SwitchboardRuntimeOptions
@@ -40,6 +41,14 @@ export function createSwitchboardRouter(options: SwitchboardExpressRouterOptions
       userAgent: request.header("user-agent"),
       remoteAddress: request.ip
     });
+    response.status(result.statusCode);
+    for (const [name, value] of Object.entries(result.headers)) {
+      response.setHeader(name, value);
+    }
+    response.json(result.body);
+  });
+  router.post(SWITCHBOARD_UPSTREAM_ADMISSION_PATH, express.json({ limit: "32kb" }), async (request, response) => {
+    const result = await runtime.buildUpstreamAdmissionProbeResult((request.body ?? {}) as Record<string, unknown>);
     response.status(result.statusCode);
     for (const [name, value] of Object.entries(result.headers)) {
       response.setHeader(name, value);

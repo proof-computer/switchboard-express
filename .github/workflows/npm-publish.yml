@@ -1,6 +1,9 @@
 name: npm Publish
 
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       publish:
@@ -37,8 +40,18 @@ jobs:
           if [ -f scripts/verify-package-artifacts.mjs ]; then
             node scripts/verify-package-artifacts.mjs
           fi
+      - name: Check published version
+        id: published
+        run: |
+          package_name="$(node -p "require('./package.json').name")"
+          package_version="$(node -p "require('./package.json').version")"
+          if npm view "$package_name@$package_version" version >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Publish dry run
-        if: ${{ !inputs.publish }}
+        if: ${{ github.event_name == 'workflow_dispatch' && !inputs.publish }}
         run: |
           access_args=()
           if node -e "process.exit(require('./package.json').name.startsWith('@') ? 0 : 1)"; then
@@ -46,10 +59,14 @@ jobs:
           fi
           npm publish --dry-run "${access_args[@]}"
       - name: Publish
-        if: ${{ inputs.publish }}
+        if: ${{ (github.event_name == 'push' || inputs.publish) && steps.published.outputs.published != 'true' }}
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
         run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "Missing NPM_ACCESS_TOKEN repository secret" >&2
+            exit 1
+          fi
           access_args=()
           if node -e "process.exit(require('./package.json').name.startsWith('@') ? 0 : 1)"; then
             access_args=(--access public)
