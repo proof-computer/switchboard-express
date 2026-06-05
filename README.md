@@ -19,7 +19,7 @@ publishing is prepared but not active yet.
 
 ```ts
 import express from "express";
-import { serveSwitchboardExpress } from "@proofcomputer/switchboard-express";
+import { serveSwitchboardExpress } from "@proof-computer/switchboard-express";
 
 const app = express();
 

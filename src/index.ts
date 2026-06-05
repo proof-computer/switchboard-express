@@ -9,7 +9,7 @@ import {
   type SwitchboardChallengeConfig,
   type SwitchboardRuntime,
   type SwitchboardRuntimeOptions
-} from "@proofcomputer/switchboard-sdk";
+} from "@proof-computer/switchboard-runtime";
 
 export interface SwitchboardExpressRouterOptions extends Partial<SwitchboardChallengeConfig> {
   runtime?: SwitchboardRuntime;
