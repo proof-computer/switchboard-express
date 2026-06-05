@@ -11,6 +11,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,6 +21,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: Verify release tag matches package version
+        run: |
+          expected="v$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package version $expected" >&2
+            exit 1
+          fi
       - name: Test
         run: |
           if node -e "process.exit(require('./package.json').scripts?.test ? 0 : 1)"; then
@@ -36,7 +45,7 @@ jobs:
           mkdir -p artifacts
           npm pack --json --pack-destination artifacts > "$RUNNER_TEMP/npm-pack.json"
           pkg_file="$(node -e "const fs = require('fs'); const p = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'))[0]; console.log(p.filename);" "$RUNNER_TEMP/npm-pack.json")"
-          asset_name="$(node -p "require('./package.json').name.replace(/^@proofcomputer\\//, '')")"
+          asset_name="$(node -e "const name = require('./package.json').name; console.log(name.replace(/^@proof(?:computer|-computer)\\//, '').replace(/[^a-zA-Z0-9._-]+/g, '-'));")"
           cp "artifacts/$pkg_file" "artifacts/${asset_name}.tgz"
           if [ -f install.sh ]; then
             cp install.sh artifacts/install.sh
