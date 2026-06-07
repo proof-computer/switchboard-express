@@ -1,6 +1,6 @@
 {
   "name": "@proof-computer/switchboard-express",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Express adapter for Switchboard Acurast webserver jobs.",
   "repository": {
     "type": "git",
@@ -25,7 +25,7 @@
     "pack:dry-run": "npm pack --dry-run --json"
   },
   "dependencies": {
-    "@proof-computer/switchboard-runtime": "0.1.4"
+    "@proof-computer/switchboard-runtime": "0.1.5"
   },
   "peerDependencies": {
     "express": "^5.0.0"
